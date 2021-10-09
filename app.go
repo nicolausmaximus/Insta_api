@@ -14,21 +14,20 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
+//user table 
 type User struct {
 	ID       primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Name     string             `json:"name,omitempty" bson:"name,omitempty"`
 	Email    string             `json:"email,omitempty" bson:"email,omitempty"`
 	Password string             `json:"password,omitempty" bson:"password,omitempty"`
 }
-
+//post table
 type Post struct {
 	ID         primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Caption    string             `json:"caption,omitempty" bson:"caption,omitempty"`
@@ -191,11 +190,11 @@ func main() {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	router := mux.NewRouter()
-	router.HandleFunc("/users", CreateNewUser).Methods("POST")
-	router.HandleFunc("/users/{id}", GetUser).Methods("GET")
-	router.HandleFunc("/posts", CreateNewPosts).Methods("POST")
-	router.HandleFunc("/posts/{id}", GetPostUsingID).Methods("GET")
-	router.HandleFunc("/posts/users/{id}&limit={limit}", GetAllPosts).Methods("GET")
+	router.HandleFunc("/users", CreateNewUser).Methods("POST")  //create_user
+	router.HandleFunc("/users/{id}", GetUser).Methods("GET")    //get_user_according_to_id
+	router.HandleFunc("/posts", CreateNewPosts).Methods("POST")  //create_new_post
+	router.HandleFunc("/posts/{id}", GetPostUsingID).Methods("GET")  //get_post_using_the_id
+	router.HandleFunc("/posts/users/{id}&limit={limit}", GetAllPosts).Methods("GET")  //get_all_posts_of_a_user
 	time.Sleep(3 * time.Second)
-	http.ListenAndServe(":1211", router)
+	http.ListenAndServe(":3000", router)
 }
