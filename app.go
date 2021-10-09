@@ -11,10 +11,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -36,7 +38,6 @@ type Post struct {
 }
 
 var client *mongo.Client
-var postlist []Post
 
 //Mutex has been used to make the server thread safe
 var lock sync.Mutex
@@ -82,7 +83,7 @@ func CreateNewUser(response http.ResponseWriter, request *http.Request) {
 	json.NewDecoder(request.Body).Decode(&user)
 	hash := hash_password([]byte(user.Password), "ckdjjekk29i2")
 	user.Password = string(hash)
-	collection := client.Database("instagramAPI").Collection("users")
+	collection := client.Database("instagram_api").Collection("users")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	result, _ := collection.InsertOne(ctx, user)
 	json.NewEncoder(response).Encode(result)
@@ -97,10 +98,9 @@ func CreateNewPosts(response http.ResponseWriter, request *http.Request) {
 	var post Post
 	json.NewDecoder(request.Body).Decode(&post)
 	post.Time_stamp = time.Now().Format("2001-10-26 20:59:20")
-	collection := client.Database("instagramAPI").Collection("posts")
+	collection := client.Database("instagram_api").Collection("posts")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	result, _ := collection.InsertOne(ctx, post)
-	postlist = append(postlist, post)
 	json.NewEncoder(response).Encode(result)
 	time.Sleep(1 * time.Second)
 }
@@ -113,7 +113,7 @@ func GetUser(response http.ResponseWriter, request *http.Request) {
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
 	var user User
-	collection := client.Database("instagramAPI").Collection("users")
+	collection := client.Database("instagram_api").Collection("users")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	err := collection.FindOne(ctx, User{ID: id}).Decode(&user)
 	if err != nil {
@@ -133,7 +133,7 @@ func GetPostUsingID(response http.ResponseWriter, request *http.Request) {
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
 	var post Post
-	collection := client.Database("instagramAPI").Collection("posts")
+	collection := client.Database("instagram_api").Collection("posts")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	err := collection.FindOne(ctx, Post{ID: id}).Decode(&post)
 	if err != nil {
@@ -147,28 +147,38 @@ func GetPostUsingID(response http.ResponseWriter, request *http.Request) {
 
 //Get all Posts of the User
 func GetAllPosts(response http.ResponseWriter, request *http.Request) {
+	var postlist []Post
 	lock.Lock()
 	defer lock.Unlock()
 	response.Header().Add("content-type", "application/json")
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
+	limit, _ := strconv.Atoi(params["limit"])
 	var post Post
-	collection := client.Database("instagramAPI").Collection("posts")
+	collection := client.Database("instagram_api").Collection("posts")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err := collection.FindOne(ctx, Post{User: id}).Decode(&post)
+	cur, err := collection.Find(ctx, bson.M{"user": id})
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
 		response.Write([]byte(`{"message": "` + err.Error() + `"}`))
 		return
 	}
+	for cur.Next(ctx) {
+		err := cur.Decode(&post)
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
+			response.Write([]byte(`{"message": "` + err.Error() + `"}`))
+			return
+		}
+		postlist = append(postlist, post)
+	}
 
 	for _, item := range postlist {
 		if item.User == id {
-			fmt.Println(item.ID)
-			fmt.Println(item.Caption)
-
-			json.NewEncoder(response).Encode(item)
-			//return
+			if limit > 0 {
+				limit--
+				json.NewEncoder(response).Encode(item)
+			}
 		}
 	}
 	json.NewEncoder(response).Encode(&Post{})
@@ -185,7 +195,7 @@ func main() {
 	router.HandleFunc("/users/{id}", GetUser).Methods("GET")
 	router.HandleFunc("/posts", CreateNewPosts).Methods("POST")
 	router.HandleFunc("/posts/{id}", GetPostUsingID).Methods("GET")
-	router.HandleFunc("/posts/users/{id}", GetAllPosts).Methods("GET")
+	router.HandleFunc("/posts/users/{id}&limit={limit}", GetAllPosts).Methods("GET")
 	time.Sleep(3 * time.Second)
 	http.ListenAndServe(":1211", router)
 }
