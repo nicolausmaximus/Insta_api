@@ -13,6 +13,14 @@ func TestHashing(t *testing.T) {
 		t.Errorf("Correct")
 	}
 }
+func TestHashing_passphrase(t *testing.T) {
+	var bk string
+	ans := createHash("aniket")
+	res :=ans == bk
+	if res!=false {
+		t.Errorf("Correct")
+	}
+}
 
 func BenchmarkAdd(b *testing.B) {
 	for i := 0; i < 5; i++ {
