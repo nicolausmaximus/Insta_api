@@ -34,19 +34,18 @@ You can access it using Curl or postman
 5. List all posts of a user <- URL should be ‘/posts/users/<Id here>'
 
                     
-                    User creation</br>
-                    ![image](https://user-images.githubusercontent.com/63350417/136671832-e5faadfb-3594-4308-a48f-c2d332a21a2f.png)
+User creation</br>
+![image](https://user-images.githubusercontent.com/63350417/136671832-e5faadfb-3594-4308-a48f-c2d332a21a2f.png)
 </br>
-                    Updated Database</br>
-                    ![image](https://user-images.githubusercontent.com/63350417/136671852-894e7236-2b5a-461a-bde2-25d8dbf4a3a5.png)
-                    As we can see, the password is properly hashed</br>
+Updated Database</br>
+![image](https://user-images.githubusercontent.com/63350417/136671852-894e7236-2b5a-461a-bde2-25d8dbf4a3a5.png)
+As we can see, the password is properly hashed</br>
                     
-                    Get user details using userid</br>
-                    ![image](https://user-images.githubusercontent.com/63350417/136671882-fb0c7e27-db75-4a0c-8183-4eaa9522fe67.png)
+Get user details using userid</br>
+![image](https://user-images.githubusercontent.com/63350417/136671882-fb0c7e27-db75-4a0c-8183-4eaa9522fe67.png)
 
 
-
-   ![image](https://user-images.githubusercontent.com/63350417/136671285-ce08f28e-c147-45fe-837b-e6bda56d5aae.png)</br>
+![image](https://user-images.githubusercontent.com/63350417/136671285-ce08f28e-c147-45fe-837b-e6bda56d5aae.png)</br>
 ![image](https://user-images.githubusercontent.com/63350417/136671290-41e033f9-8846-4e6b-8b6a-7112a596ca33.png)</br>
 
 get post according to id
