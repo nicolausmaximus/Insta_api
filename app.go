@@ -1,114 +1,91 @@
-package main
+package appointy
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Person struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson: "_id,omitempty"`
-	Firstname string             `json:"firstname,omitempty" bson:"firstname,omitempty"`
-	Lastname  string             `json:"lastname,omitempty" bson:"lastname,omitempty"`
+	ID       primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Name     string             `json:"name,omitempty" bson:"name,omitempty"`
+	Email    string             `json:"email,omitempty" bson:"email,omitempty"`
+	Password string             `json:"password,omitempty" bson:"password,omitempty"`
+}
+
+type Post struct {
+	ID      primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	User    primitive.ObjectID `json:"user,omitempty" bson:"user,omitempty"`
+	Caption string             `json:"caption,omitempty" bson:"caption,omitempty"`
+	Image   string             `json:"image,omitempty" bson:"image,omitempty"`
+	Time    string             `json:"time,omitempty" bson:"time,omitempty"`
 }
 
 var client *mongo.Client
+var postt []Post
 
-func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route)}
-}
-
-type Router struct {
-	NotFoundHandler         http.Handler
-	MethodNotAllowedHandler http.Handler
-	routes                  []*Route
-	namedRoutes             map[string]*Route
-	KeepContext             bool
-	middlewares             []middleware
-	routeConf
-}
-type routeConf struct {
-	useEncodedPath bool
-	strictSlash    bool
-	skipClean      bool
-	regexp         routeRegexpGroup
-	matchers       []matcher
-	buildScheme    string
-	buildVarsFunc  BuildVarsFunc
-}
-
-func CreatePersonEndpoint(response http.ResponseWriter, request *http.Request) {
+//create Users Endpoint
+func CreateUsersEndpoint(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	var person Person
 	json.NewDecoder(request.Body).Decode(&person)
+	hash, err := bcrypt.GenerateFromPassword([]byte(person.Password), bcrypt.DefaultCost)
+	person.Password = string(hash)
+	if err != nil {
+		fmt.Println(err)
+	}
 	collection := client.Database("instagramAPI").Collection("users")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	result, _ := collection.InsertOne(ctx, person)
 	json.NewEncoder(response).Encode(result)
 }
-func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route)}
-}
-func GetPeopleEndpoint(response http.ResponseWriter, request *http.Request) {
+
+func CreatePostsEndpoint(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
-	var people []Person
+	var post Post
+	json.NewDecoder(request.Body).Decode(&post)
+	post.Time = time.Now().Format("2006-01-02 15:04:05")
+	collection := client.Database("instagramAPI").Collection("posts")
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	result, _ := collection.InsertOne(ctx, post)
+	postt = append(postt, post)
+	json.NewEncoder(response).Encode(result)
+}
+
+func GetUsersEndpoint(response http.ResponseWriter, request *http.Request) {
+	response.Header().Add("content-type", "application/json")
+	params := mux.Vars(request)
+	id, _ := primitive.ObjectIDFromHex(params["id"])
+	var user Person
 	collection := client.Database("instagramAPI").Collection("users")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	cursor, err := collection.Find(ctx, bson.M{})
+	err := collection.FindOne(ctx, Person{ID: id}).Decode(&user)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		response.Write([]byte(`{"message": "` + err.Error() + `"}`))
 		return
-		//fmt.Println(err)
 	}
-	defer cursor.Close(ctx)
-	for cursor.Next(ctx) {
-		var person Person
-		cursor.Decode(&person)
-		people = append(people, person)
-	}
-
-	if err := cursor.Err(); err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
-		return
-		//fmt.Println(err)
-	}
-	json.NewEncoder(response).Encode(people)
-
+	json.NewEncoder(response).Encode(user)
 }
+
 func main() {
 	fmt.Println("Starting the application")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	router := mux.NewRouter()
+	router.HandleFunc("/users", CreateUsersEndpoint).Methods("POST")
+	router.HandleFunc("/users/{id}", GetUsersEndpoint).Methods("GET")
+	router.HandleFunc("/posts", CreatePostsEndpoint).Methods("POST")
+	router.HandleFunc("/posts/{id}", GetPostsEndpoint).Methods("GET")
+	router.HandleFunc("/posts/users/{id}", GetAllPostsEndpoint).Methods("GET")
 
-	resp, err := http.PostForm("http://localhost:8081/person", CreatePersonEndpoint)
-	if err != nil {
-		log.Printf("Request Failed: %s", err)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body) // Log the request body
-	bodyString := string(body)
-	log.Print(bodyString) // Unmarshal result
-	post := Person{}
-	err = json.Unmarshal(body, &post)
-	if err != nil {
-		log.Printf("Reading body failed: %s", err)
-		return
-	}
-
-	router := NewRouter()
-	router.HandleFunc("/person", CreatePersonEndpoint).Methods("POST")
-	router.HandleFunc("/people", GetPeopleEndpoint).Methods("GET")
-	http.ListenAndServe(":3101", router)
+	http.ListenAndServe(":4000", router)
 }
