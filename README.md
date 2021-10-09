@@ -9,6 +9,7 @@ User can post images with caption</br>
 Automatic time stamp will be generated</br>
 User can get all details of his posts</br>
 User can search for a particular post using its id</br>
+Proper pagination algorithms have been implemented to keep a check on the user data(Internet consumption while using the system). 
 
 
 </br>
