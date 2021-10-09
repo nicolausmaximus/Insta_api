@@ -61,6 +61,7 @@ func hash_password(data []byte, passphrase string) []byte {
 	return ciphertext
 }
 
+//function to create a new user
 func CreateNewUser(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	var user User
@@ -73,6 +74,7 @@ func CreateNewUser(response http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(response).Encode(result)
 }
 
+//function to create a new post
 func CreateNewPosts(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	var post Post
@@ -85,7 +87,8 @@ func CreateNewPosts(response http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(response).Encode(result)
 }
 
-func GetUsersEndpoint(response http.ResponseWriter, request *http.Request) {
+//function to get user according to his is
+func GetUser(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
@@ -100,7 +103,9 @@ func GetUsersEndpoint(response http.ResponseWriter, request *http.Request) {
 	}
 	json.NewEncoder(response).Encode(user)
 }
-func GetPostsEndpoint(response http.ResponseWriter, request *http.Request) {
+
+//get a post using id
+func GetPostUsingID(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("content-type", "application/json")
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
@@ -116,16 +121,42 @@ func GetPostsEndpoint(response http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(response).Encode(post)
 }
 
+//Get all Posts of the User
+func GetAllPosts(response http.ResponseWriter, request *http.Request) {
+	response.Header().Add("content-type", "application/json")
+	params := mux.Vars(request)
+	id, _ := primitive.ObjectIDFromHex(params["id"])
+	var post Post
+	collection := client.Database("instagramAPI").Collection("posts")
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err := collection.FindOne(ctx, Post{User: id}).Decode(&post)
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte(`{"message": "` + err.Error() + `"}`))
+		return
+	}
+
+	for _, item := range postlist {
+		if item.User == id {
+			fmt.Println(item.ID)
+			fmt.Println(item.Caption)
+
+			json.NewEncoder(response).Encode(item)
+			//return
+		}
+	}
+	json.NewEncoder(response).Encode(&Post{})
+}
 func main() {
 	fmt.Println("Starting the application")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	router := mux.NewRouter()
 	router.HandleFunc("/users", CreateNewUser).Methods("POST")
-	router.HandleFunc("/users/{id}", GetUsersEndpoint).Methods("GET")
+	router.HandleFunc("/users/{id}", GetUser).Methods("GET")
 	router.HandleFunc("/posts", CreateNewPosts).Methods("POST")
-	router.HandleFunc("/posts/{id}", GetPostsEndpoint).Methods("GET")
-	router.HandleFunc("/posts/users/{id}", GetAllPostsEndpoint).Methods("GET")
+	router.HandleFunc("/posts/{id}", GetPostUsingID).Methods("GET")
+	router.HandleFunc("/posts/users/{id}", GetAllPosts).Methods("GET")
 
-	http.ListenAndServe(":1291", router)
+	http.ListenAndServe(":1211", router)
 }

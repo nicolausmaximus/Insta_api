@@ -12,3 +12,9 @@ To run the application, type </br>
 
 Now the server starts on port 3000</br>
 You can access it using Curl or postman
+
+1. Create an User <- URL should be ‘/users'</br>
+2. Get a user using id <- URL should be ‘/users/<id here>’
+3. Create a Post <- URL should be ‘/posts'
+4. Get a post using id <- URL should be ‘/posts/<id here>’
+5. List all posts of a user <- URL should be ‘/posts/users/<Id here>'
