@@ -32,4 +32,12 @@ You can access it using Curl or postman
 5. List all posts of a user <- URL should be ‘/posts/users/<Id here>'
 
                     
-   
+   ![image](https://user-images.githubusercontent.com/63350417/136671285-ce08f28e-c147-45fe-837b-e6bda56d5aae.png)</br>
+![image](https://user-images.githubusercontent.com/63350417/136671290-41e033f9-8846-4e6b-8b6a-7112a596ca33.png)</br>
+
+get post according to id
+![image](https://user-images.githubusercontent.com/63350417/136671324-c3b9e1a6-1c9d-4a21-a693-7fe186c6edb8.png)</br>
+
+
+
+                  
