@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -37,17 +38,26 @@ type Post struct {
 var client *mongo.Client
 var postlist []Post
 
+//Mutex has been used to make the server thread safe
+var lock sync.Mutex
+
+//hashing blocksize
 const BlockSize = 16
 
 //we are passing the passphrase to create a 32 byte key that will be used to hash the password
 func createHash(key string) string {
+	lock.Lock()
+	defer lock.Unlock()
 	hasher := md5.New()
 	hasher.Write([]byte(key))
+	time.Sleep(1 * time.Second)
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 //hashing function -> used to hash the password
 func hash_password(data []byte, passphrase string) []byte {
+	lock.Lock()
+	defer lock.Unlock()
 	block, _ := aes.NewCipher([]byte(createHash(passphrase)))
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
@@ -58,11 +68,15 @@ func hash_password(data []byte, passphrase string) []byte {
 		panic(err.Error())
 	}
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	time.Sleep(1 * time.Second)
 	return ciphertext
+
 }
 
 //function to create a new user
 func CreateNewUser(response http.ResponseWriter, request *http.Request) {
+	lock.Lock()
+	defer lock.Unlock()
 	response.Header().Add("content-type", "application/json")
 	var user User
 	json.NewDecoder(request.Body).Decode(&user)
@@ -72,10 +86,13 @@ func CreateNewUser(response http.ResponseWriter, request *http.Request) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	result, _ := collection.InsertOne(ctx, user)
 	json.NewEncoder(response).Encode(result)
+	time.Sleep(1 * time.Second)
 }
 
 //function to create a new post
 func CreateNewPosts(response http.ResponseWriter, request *http.Request) {
+	lock.Lock()
+	defer lock.Unlock()
 	response.Header().Add("content-type", "application/json")
 	var post Post
 	json.NewDecoder(request.Body).Decode(&post)
@@ -85,10 +102,13 @@ func CreateNewPosts(response http.ResponseWriter, request *http.Request) {
 	result, _ := collection.InsertOne(ctx, post)
 	postlist = append(postlist, post)
 	json.NewEncoder(response).Encode(result)
+	time.Sleep(1 * time.Second)
 }
 
 //function to get user according to his is
 func GetUser(response http.ResponseWriter, request *http.Request) {
+	lock.Lock()
+	defer lock.Unlock()
 	response.Header().Add("content-type", "application/json")
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
@@ -102,10 +122,13 @@ func GetUser(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	json.NewEncoder(response).Encode(user)
+	time.Sleep(1 * time.Second)
 }
 
 //get a post using id
 func GetPostUsingID(response http.ResponseWriter, request *http.Request) {
+	lock.Lock()
+	defer lock.Unlock()
 	response.Header().Add("content-type", "application/json")
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
@@ -119,10 +142,13 @@ func GetPostUsingID(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	json.NewEncoder(response).Encode(post)
+	time.Sleep(1 * time.Second)
 }
 
 //Get all Posts of the User
 func GetAllPosts(response http.ResponseWriter, request *http.Request) {
+	lock.Lock()
+	defer lock.Unlock()
 	response.Header().Add("content-type", "application/json")
 	params := mux.Vars(request)
 	id, _ := primitive.ObjectIDFromHex(params["id"])
@@ -146,7 +172,10 @@ func GetAllPosts(response http.ResponseWriter, request *http.Request) {
 		}
 	}
 	json.NewEncoder(response).Encode(&Post{})
+	time.Sleep(1 * time.Second)
 }
+
+//main function to handle requests and call all other functions
 func main() {
 	fmt.Println("Starting the application")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -157,6 +186,6 @@ func main() {
 	router.HandleFunc("/posts", CreateNewPosts).Methods("POST")
 	router.HandleFunc("/posts/{id}", GetPostUsingID).Methods("GET")
 	router.HandleFunc("/posts/users/{id}", GetAllPosts).Methods("GET")
-
+	time.Sleep(3 * time.Second)
 	http.ListenAndServe(":1211", router)
 }
