@@ -1,4 +1,15 @@
-# Insta_api
+# Insta_api using golang and mongodb
+Proper hashing algorithms have been implemented so that user password cannot be reverse engineered.
+
+Features:</br>
+User can create a new account</br>
+User data is safe as hashing algorithms have been implemented</br>
+User can see user details using userid</br>
+User can post images with caption</br>
+Automatic time stamp will be generated</br>
+User can get all details of his posts</br>
+User can search for a particular post using its id</br>
+
 
 </br>
 To get started:</br>
@@ -18,3 +29,6 @@ You can access it using Curl or postman
 3. Create a Post <- URL should be ‘/posts'
 4. Get a post using id <- URL should be ‘/posts/<id here>’
 5. List all posts of a user <- URL should be ‘/posts/users/<Id here>'
+
+                    
+   
